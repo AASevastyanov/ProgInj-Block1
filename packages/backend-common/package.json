@@ -1,0 +1,15 @@
+{
+  "name": "@qoms/backend-common",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@qoms/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0"
+  }
+}

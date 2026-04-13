@@ -1,0 +1,9 @@
+{
+  "name": "@qoms/smoke-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "smoke": "tsx src/index.ts"
+  }
+}
+

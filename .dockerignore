@@ -1,0 +1,9 @@
+node_modules
+dist
+.pnpm-store
+.git
+postgres-data
+mongo-data
+redis-data
+coverage
+

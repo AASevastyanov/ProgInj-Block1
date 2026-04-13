@@ -1,0 +1,11 @@
+node_modules
+dist
+.pnpm-store
+.env
+.DS_Store
+coverage
+*.log
+mongo-data
+postgres-data
+redis-data
+

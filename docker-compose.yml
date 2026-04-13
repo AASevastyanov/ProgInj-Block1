@@ -1,0 +1,278 @@
+name: qoms
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-qoms}
+      POSTGRES_USER: ${POSTGRES_USER:-qoms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qoms}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qoms} -d ${POSTGRES_DB:-qoms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  kafka:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_KRAFT_CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  api-gateway:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/api-gateway", "start"]
+    environment: &common-env
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-internal-service-token}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,postgres,redis,mongo,kafka,user-service,zone-management-service,queue-service,reservation-service,notification-service,monitoring-event-ingestion-service,api-gateway,nginx}
+      no_proxy: ${NO_PROXY:-localhost,127.0.0.1,postgres,redis,mongo,kafka,user-service,zone-management-service,queue-service,reservation-service,notification-service,monitoring-event-ingestion-service,api-gateway,nginx}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-queue-and-occupancy-events}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-qoms}
+      POSTGRES_USER: ${POSTGRES_USER:-qoms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qoms}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MONGO_URI: mongodb://mongo:27017/qoms
+      USER_SERVICE_URL: http://user-service:3001
+      ZONE_MANAGEMENT_SERVICE_URL: http://zone-management-service:3002
+      QUEUE_SERVICE_URL: http://queue-service:3003
+      RESERVATION_SERVICE_URL: http://reservation-service:3004
+      NOTIFICATION_SERVICE_URL: http://notification-service:3005
+      MONITORING_SERVICE_URL: http://monitoring-event-ingestion-service:3006
+      API_GATEWAY_PORT: 3000
+    depends_on:
+      redis:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      zone-management-service:
+        condition: service_started
+      queue-service:
+        condition: service_started
+      reservation-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      monitoring-event-ingestion-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3000/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  user-service:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/user-service", "start"]
+    environment:
+      <<: *common-env
+      USER_SERVICE_PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3001/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  zone-management-service:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/zone-management-service", "start"]
+    environment:
+      <<: *common-env
+      ZONE_MANAGEMENT_SERVICE_PORT: 3002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3002/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  queue-service:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/queue-service", "start"]
+    environment:
+      <<: *common-env
+      QUEUE_SERVICE_PORT: 3003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      zone-management-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3003/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  reservation-service:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/reservation-service", "start"]
+    environment:
+      <<: *common-env
+      RESERVATION_SERVICE_PORT: 3004
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      zone-management-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3004/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  notification-service:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/notification-service", "start"]
+    environment:
+      <<: *common-env
+      NOTIFICATION_SERVICE_PORT: 3005
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3005/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  monitoring-event-ingestion-service:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/monitoring-event-ingestion-service", "start"]
+    environment:
+      <<: *common-env
+      MONITORING_EVENT_INGESTION_SERVICE_PORT: 3006
+    depends_on:
+      mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off -q -O - http://127.0.0.1:3006/health | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  user-web:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/user-web", "dev"]
+    environment:
+      <<: *common-env
+      USER_WEB_PORT: 5173
+    depends_on:
+      api-gateway:
+        condition: service_started
+
+  admin-web:
+    build: .
+    command: ["pnpm", "--filter", "@qoms/admin-web", "dev"]
+    environment:
+      <<: *common-env
+      ADMIN_WEB_PORT: 5174
+    depends_on:
+      api-gateway:
+        condition: service_started
+
+  bootstrap:
+    build: .
+    command: ["sh", "-c", "pnpm migrate && pnpm seed"]
+    environment:
+      <<: *common-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/proxy_params:/etc/nginx/proxy_params:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      user-web:
+        condition: service_started
+      admin-web:
+        condition: service_started
+
+volumes:
+  postgres-data:
+  redis-data:
+  mongo-data:
