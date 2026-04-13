@@ -1,0 +1,77 @@
+flowchart LR
+    subgraph Clients
+        user_app["User Client App"]
+        admin_app["Admin Web App"]
+        ext_source["External Source"]
+    end
+
+    edge["Edge Router / Load Balancer (nginx)"]
+    gateway["API Gateway"]
+
+    subgraph Services
+        user_svc["User Service"]
+        zone_svc["Zone Management Service"]
+        queue_svc["Queue Service"]
+        reservation_svc["Reservation Service"]
+        notification_svc["Notification Service"]
+        ingestion_svc["Monitoring / Event Ingestion Service"]
+    end
+
+    kafka["Kafka"]
+
+    subgraph Data
+        pg["PostgreSQL platform
+logical separation by service"]
+        redis["Redis / Valkey"]
+        mongo["MongoDB
+occupancy history and telemetry"]
+    end
+
+    observability["Observability Stack (MVP logs + health)"]
+
+    user_app --> edge
+    admin_app --> edge
+    ext_source --> edge
+    edge --> gateway
+
+    gateway --> user_svc
+    gateway --> zone_svc
+    gateway --> queue_svc
+    gateway --> reservation_svc
+    gateway --> notification_svc
+    gateway --> ingestion_svc
+
+    queue_svc --> user_svc
+    queue_svc --> zone_svc
+    reservation_svc --> user_svc
+    reservation_svc --> zone_svc
+    notification_svc --> user_svc
+
+    user_svc --> pg
+    zone_svc --> pg
+    queue_svc --> pg
+    reservation_svc --> pg
+    notification_svc --> pg
+
+    zone_svc --> redis
+    queue_svc --> redis
+    reservation_svc --> redis
+    gateway --> redis
+
+    ingestion_svc --> mongo
+    ingestion_svc --> kafka
+    queue_svc --> kafka
+    reservation_svc --> kafka
+    zone_svc --> kafka
+    kafka --> zone_svc
+    kafka --> notification_svc
+
+    user_app -. telemetry .-> observability
+    admin_app -. telemetry .-> observability
+    gateway -. request ids/logs .-> observability
+    user_svc -. logs .-> observability
+    zone_svc -. logs .-> observability
+    queue_svc -. logs .-> observability
+    reservation_svc -. logs .-> observability
+    notification_svc -. logs .-> observability
+    ingestion_svc -. logs .-> observability

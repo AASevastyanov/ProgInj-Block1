@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant Source as External occupancy source
+    participant Edge as Edge Router / Load Balancer
+    participant Gateway as API Gateway
+    participant Ingestion as Monitoring / Event Ingestion Service
+    participant Mongo as MongoDB
+    participant Kafka as Kafka
+    participant ZoneSvc as Zone Management Service
+    participant PG as PostgreSQL
+    participant Redis as Redis / Valkey
+    participant NotificationSvc as Notification Service
+
+    Source->>Edge: Новый сигнал загрузки зоны
+    Edge->>Edge: Coarse-grained limit check
+    Edge->>Gateway: Интеграционный маршрут
+    Gateway->>Gateway: Fine-grained route policy
+    Gateway->>Ingestion: Передать occupancy payload
+    Ingestion->>Mongo: Сохранить raw event и telemetry snapshot
+    Ingestion->>Kafka: occupancy_updated
+
+    Kafka-->>ZoneSvc: occupancy_updated
+    ZoneSvc->>PG: Обновить состояние зоны и outbox
+    ZoneSvc->>Redis: Инвалидировать и обновить hot read-model
+
+    alt Зона перегружена
+        ZoneSvc->>Kafka: zone_overloaded
+        ZoneSvc->>Kafka: zone_status_changed
+    else Перегрузки нет, но статус изменился
+        ZoneSvc->>Kafka: zone_status_changed
+    end
+
+    Kafka-->>NotificationSvc: Получить доменные события
+    NotificationSvc->>PG: Записать журнал доставки

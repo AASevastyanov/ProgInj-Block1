@@ -1,0 +1,19 @@
+flowchart LR
+    gateway["API Gateway"]
+    queue_svc["Queue Service"]
+    user_svc["User Service"]
+    zone_svc["Zone Management Service"]
+    pg["PostgreSQL
+queue schema or database"]
+    redis["Redis / Valkey
+hot queue state and counters"]
+    kafka["Kafka"]
+    notification_svc["Notification Service"]
+
+    gateway --> queue_svc
+    queue_svc --> user_svc
+    queue_svc --> zone_svc
+    queue_svc --> pg
+    queue_svc --> redis
+    queue_svc --> kafka
+    kafka --> notification_svc

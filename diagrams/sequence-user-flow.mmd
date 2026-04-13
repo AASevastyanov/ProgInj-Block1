@@ -1,0 +1,60 @@
+sequenceDiagram
+    actor User as User
+    participant App as User Client App
+    participant Edge as Edge Router / Load Balancer
+    participant Gateway as API Gateway
+    participant UserSvc as User Service
+    participant ZoneSvc as Zone Management Service
+    participant QueueSvc as Queue Service
+    participant ReservationSvc as Reservation Service
+    participant PG as PostgreSQL
+    participant Redis as Redis / Valkey
+    participant Kafka as Kafka
+
+    User->>App: Открывает managed zone
+    App->>Edge: Запрос состояния зоны
+    Edge->>Edge: Coarse-grained limit check
+    Edge->>Gateway: Передача запроса
+    Gateway->>Gateway: Fine-grained policy and rate limit
+    Gateway->>ZoneSvc: Получить состояние зоны
+    ZoneSvc->>Redis: Читать hot read-model
+    alt Кэш актуален
+        Redis-->>ZoneSvc: Состояние зоны
+    else Нужна загрузка из PostgreSQL
+        ZoneSvc->>PG: Читать подтвержденное состояние
+        PG-->>ZoneSvc: Состояние зоны
+    end
+    ZoneSvc-->>Gateway: Ответ по зоне
+    Gateway-->>App: Состояние зоны
+
+    alt Операция очереди
+        App->>Edge: Вступить в очередь / выйти из очереди
+        Edge->>Edge: Coarse-grained limit check
+        Edge->>Gateway: Передача команды
+        Gateway->>Gateway: Fine-grained route policy
+        Gateway->>QueueSvc: Команда очереди
+        QueueSvc->>UserSvc: Проверка роли пользователя
+        UserSvc-->>QueueSvc: Роль подтверждена
+        QueueSvc->>ZoneSvc: Проверка правил зоны
+        ZoneSvc-->>QueueSvc: Правила подтверждены
+        QueueSvc->>PG: Зафиксировать изменение очереди и outbox
+        QueueSvc->>Redis: Обновить горячее состояние
+        QueueSvc->>Kafka: Публикация доменного события
+        QueueSvc-->>Gateway: Команда подтверждена
+        Gateway-->>App: Результат операции
+    else Операция бронирования
+        App->>Edge: Создать / отменить бронирование
+        Edge->>Edge: Coarse-grained limit check
+        Edge->>Gateway: Передача команды
+        Gateway->>Gateway: Fine-grained route policy
+        Gateway->>ReservationSvc: Команда бронирования
+        ReservationSvc->>UserSvc: Проверка роли пользователя
+        UserSvc-->>ReservationSvc: Роль подтверждена
+        ReservationSvc->>ZoneSvc: Проверка правил и доступности
+        ZoneSvc-->>ReservationSvc: Правила подтверждены
+        ReservationSvc->>PG: Зафиксировать бронирование и outbox
+        ReservationSvc->>Redis: Обновить горячее состояние
+        ReservationSvc->>Kafka: Публикация доменного события
+        ReservationSvc-->>Gateway: Команда подтверждена
+        Gateway-->>App: Результат операции
+    end

@@ -1,0 +1,16 @@
+flowchart LR
+    student["Студент"]
+    staff["Преподаватель / сотрудник университета"]
+    cafe_admin["Администратор столовой"]
+    cowork_admin["Администратор коворкинга"]
+    sys_admin["Системный администратор"]
+    source["Внешние сигналы загрузки зоны"]
+
+    system["Система мониторинга очередей и управления загрузкой managed zones"]
+
+    student --> system
+    staff --> system
+    cafe_admin --> system
+    cowork_admin --> system
+    sys_admin --> system
+    source --> system

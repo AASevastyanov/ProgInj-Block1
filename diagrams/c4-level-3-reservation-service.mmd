@@ -1,0 +1,19 @@
+flowchart LR
+    gateway["API Gateway"]
+    reservation_svc["Reservation Service"]
+    user_svc["User Service"]
+    zone_svc["Zone Management Service"]
+    pg["PostgreSQL
+reservation schema or database"]
+    redis["Redis / Valkey
+availability cache and counters"]
+    kafka["Kafka"]
+    notification_svc["Notification Service"]
+
+    gateway --> reservation_svc
+    reservation_svc --> user_svc
+    reservation_svc --> zone_svc
+    reservation_svc --> pg
+    reservation_svc --> redis
+    reservation_svc --> kafka
+    kafka --> notification_svc
