@@ -1,33 +1,33 @@
-# Queue and Occupancy Management System
+# Система управления очередями и загруженностью зон
 
-This repository contains the university canteen and coworking queue/occupancy monitoring system from Block 1, plus the Block 2 local platform layer.
+Этот репозиторий содержит систему мониторинга очередей и загруженности университетской столовой и коворкинга из Блока 1, а также локальный платформенный слой из Блока 2.
 
-The application domain is unchanged: clients use an API Gateway, services exchange domain events through Kafka, PostgreSQL stores transactional data, Valkey/Redis stores hot data and rate-limit keys, and MongoDB stores occupancy telemetry history.
+Предметная область приложения не изменилась: клиенты используют API Gateway, сервисы обмениваются доменными событиями через Kafka, PostgreSQL хранит транзакционные данные, Valkey/Redis хранит горячие данные и ключи rate limiting, а MongoDB хранит историю телеметрии загруженности.
 
-## Main components
+## Основные компоненты
 
 - `apps/api-gateway`
 - `services/user-service`
 - `services/queue-service`
 - `services/zone-management-service`
 - `services/notification-service`
-- optional: `services/reservation-service`, `services/monitoring-event-ingestion-service`
+- опционально: `services/reservation-service`, `services/monitoring-event-ingestion-service`
 - `apps/user-web`, `apps/admin-web`
 
-## Block 1 quick start
+## Быстрый запуск Блока 1
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Open:
+Открыть:
 
-- user UI: http://localhost:8080/
-- admin UI: http://localhost:8080/admin/
-- gateway health: http://localhost:8080/api/health
+- пользовательский UI: `http://localhost:8080/`
+- админский UI: `http://localhost:8080/admin/`
+- проверка состояния gateway: `http://localhost:8080/api/health`
 
-Seed users use password `Password123!`:
+Тестовые пользователи используют пароль `Password123!`:
 
 - `student@example.com`
 - `employee@example.com`
@@ -35,24 +35,24 @@ Seed users use password `Password123!`:
 - `coworking_admin@example.com`
 - `system_admin@example.com`
 
-## Block 2 platform layer
+## Платформенный слой Блока 2
 
-Block 2 adds a local Kubernetes, GitOps, service mesh, autoscaling, observability, rate limiting, load testing, and CI/CD layer over the existing services.
+Блок 2 добавляет поверх существующих сервисов локальный слой Kubernetes, GitOps, service mesh, autoscaling, observability, rate limiting, нагрузочное тестирование и CI/CD.
 
-Stack:
+Стек:
 
-- Minikube with Cilium target CNI
-- Terraform baseline for namespaces, service accounts, secrets, config maps, and minimal RBAC
+- Minikube с целевым CNI Cilium
+- базовая инфраструктура Terraform для namespaces, service accounts, secrets, config maps и минимального RBAC
 - ArgoCD App of Apps
-- Helm charts for `api-gateway`, `user-service`, `queue-service`, `zone-management-service`, `notification-service`
-- Strimzi Kafka deployed through Ansible
-- Kong Gateway API routing and Redis-backed rate limiting
-- Istio retry and circuit breaker policy
+- Helm-чарты для `api-gateway`, `user-service`, `queue-service`, `zone-management-service`, `notification-service`
+- Kafka через Strimzi, развернутая с помощью Ansible
+- Kong Gateway API routing и rate limiting на базе Redis
+- политики retry и circuit breaker в Istio
 - Prometheus, Grafana, Loki, Tempo, OpenTelemetry Collector, Alertmanager
-- Locust load tests
-- GitHub Actions self-hosted runner workflow with Kaniko and local registry
+- нагрузочные тесты Locust
+- workflow GitHub Actions self-hosted runner с Kaniko и локальным registry
 
-Short Block 2 path:
+Короткий путь запуска Блока 2:
 
 ```powershell
 .\scripts\block2\bootstrap-minikube.ps1
@@ -63,4 +63,4 @@ Short Block 2 path:
 .\scripts\block2\run-locust.ps1
 ```
 
-Detailed instructions are in [BLOCK2_RUNBOOK.md](BLOCK2_RUNBOOK.md). Current verification status and local limitations are in [BLOCK2_STATUS.md](BLOCK2_STATUS.md).
+Подробные инструкции находятся в `BLOCK2_RUNBOOK.md`.
