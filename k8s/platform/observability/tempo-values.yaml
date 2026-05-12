@@ -1,0 +1,21 @@
+fullnameOverride: tempo
+
+tempo:
+  retention: 24h
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+serviceMonitor:
+  enabled: true

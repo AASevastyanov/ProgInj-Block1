@@ -1,0 +1,104 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-postgres
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: data-postgres
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: k8s/data/postgres
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-valkey
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: data-valkey
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: k8s/data/valkey
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-mongodb
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: data-mongodb
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: k8s/data/mongodb
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-kafka-cr
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: data-kafka-cr
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: k8s/data/kafka
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true

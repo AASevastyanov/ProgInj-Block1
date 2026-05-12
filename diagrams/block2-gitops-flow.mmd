@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant Runner as Self-hosted Runner
+    participant Registry as Local Registry
+    participant Argo as ArgoCD
+    participant K8s as Minikube
+
+    Dev->>GH: push or workflow_dispatch
+    GH->>Runner: start Block 2 workflow
+    Runner->>Runner: helm template
+    Runner->>Registry: Kaniko build and push images
+    Runner->>GH: update Helm image tags
+    Runner->>Argo: sync block2-root
+    Argo->>K8s: sync platform, data, apps
+    K8s-->>Dev: updated local stand
