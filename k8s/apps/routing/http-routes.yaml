@@ -1,0 +1,146 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qoms-api-login
+  namespace: qoms-apps
+  annotations:
+    konghq.com/plugins: qoms-rate-limit-login
+  labels:
+    app.kubernetes.io/name: qoms-api-login
+    app.kubernetes.io/part-of: qoms
+spec:
+  parentRefs:
+    - name: qoms-gateway
+      namespace: qoms-platform
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /api/auth/login
+          method: POST
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /auth/login
+      backendRefs:
+        - name: api-gateway
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qoms-api-queue-write
+  namespace: qoms-apps
+  annotations:
+    konghq.com/plugins: qoms-rate-limit-queue-write
+  labels:
+    app.kubernetes.io/name: qoms-api-queue-write
+    app.kubernetes.io/part-of: qoms
+spec:
+  parentRefs:
+    - name: qoms-gateway
+      namespace: qoms-platform
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/queues
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /queues
+      backendRefs:
+        - name: api-gateway
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qoms-api-reservations
+  namespace: qoms-apps
+  annotations:
+    konghq.com/plugins: qoms-rate-limit-reservation-write
+  labels:
+    app.kubernetes.io/name: qoms-api-reservations
+    app.kubernetes.io/part-of: qoms
+spec:
+  parentRefs:
+    - name: qoms-gateway
+      namespace: qoms-platform
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/reservations
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /reservations
+      backendRefs:
+        - name: api-gateway
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qoms-api-occupancy-ingest
+  namespace: qoms-apps
+  annotations:
+    konghq.com/plugins: qoms-rate-limit-occupancy-ingest
+  labels:
+    app.kubernetes.io/name: qoms-api-occupancy-ingest
+    app.kubernetes.io/part-of: qoms
+spec:
+  parentRefs:
+    - name: qoms-gateway
+      namespace: qoms-platform
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /api/occupancy-events
+          method: POST
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /occupancy-events
+      backendRefs:
+        - name: api-gateway
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qoms-api-general
+  namespace: qoms-apps
+  annotations:
+    konghq.com/plugins: qoms-rate-limit-general
+  labels:
+    app.kubernetes.io/name: qoms-api-general
+    app.kubernetes.io/part-of: qoms
+spec:
+  parentRefs:
+    - name: qoms-gateway
+      namespace: qoms-platform
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: api-gateway
+          port: 3000

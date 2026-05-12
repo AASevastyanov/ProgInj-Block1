@@ -1,0 +1,84 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: qoms-rate-limit-general
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-rate-limit-general
+    app.kubernetes.io/part-of: qoms
+plugin: rate-limiting
+config:
+  minute: 1800
+  limit_by: ip
+  policy: redis
+  redis_host: valkey.qoms-data.svc.cluster.local
+  redis_port: 6379
+  fault_tolerant: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: qoms-rate-limit-login
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-rate-limit-login
+    app.kubernetes.io/part-of: qoms
+plugin: rate-limiting
+config:
+  minute: 5
+  limit_by: ip
+  policy: redis
+  redis_host: valkey.qoms-data.svc.cluster.local
+  redis_port: 6379
+  fault_tolerant: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: qoms-rate-limit-queue-write
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-rate-limit-queue-write
+    app.kubernetes.io/part-of: qoms
+plugin: rate-limiting
+config:
+  minute: 10
+  limit_by: ip
+  policy: redis
+  redis_host: valkey.qoms-data.svc.cluster.local
+  redis_port: 6379
+  fault_tolerant: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: qoms-rate-limit-reservation-write
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-rate-limit-reservation-write
+    app.kubernetes.io/part-of: qoms
+plugin: rate-limiting
+config:
+  minute: 10
+  limit_by: ip
+  policy: redis
+  redis_host: valkey.qoms-data.svc.cluster.local
+  redis_port: 6379
+  fault_tolerant: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: qoms-rate-limit-occupancy-ingest
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-rate-limit-occupancy-ingest
+    app.kubernetes.io/part-of: qoms
+plugin: rate-limiting
+config:
+  minute: 10
+  limit_by: ip
+  policy: redis
+  redis_host: valkey.qoms-data.svc.cluster.local
+  redis_port: 6379
+  fault_tolerant: true

@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qoms-gateway-services-dashboard
+  namespace: qoms-observability
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: qoms-gateway-services-dashboard
+    app.kubernetes.io/part-of: qoms
+data:
+  qoms-gateway-services.json: |
+    {
+      "title": "QOMS Gateway and Services",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "HTTP requests by service",
+          "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "sum(rate(qoms_http_requests_total[5m])) by (service)", "legendFormat": "{{service}}"}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "P95 latency by service",
+          "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "histogram_quantile(0.95, sum(rate(qoms_http_request_duration_seconds_bucket[5m])) by (le, service))", "legendFormat": "{{service}}"}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "5xx responses",
+          "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+          "targets": [
+            {"expr": "sum(rate(qoms_http_requests_total{status_code=~\"5..\"}[5m])) by (service)", "legendFormat": "{{service}}"}
+          ]
+        }
+      ]
+    }

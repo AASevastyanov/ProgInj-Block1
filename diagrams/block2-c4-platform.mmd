@@ -1,0 +1,45 @@
+flowchart LR
+    client["User/Admin/Load Test Client"]
+    kong["Kong Gateway API"]
+    gateway["API Gateway"]
+
+    subgraph apps["qoms-apps namespace"]
+        user["User Service"]
+        zone["Zone Management Service"]
+        queue["Queue Service"]
+        notification["Notification Service"]
+    end
+
+    subgraph data["qoms-data + kafka namespaces"]
+        pg["PostgreSQL"]
+        valkey["Valkey"]
+        mongo["MongoDB optional"]
+        kafka["Strimzi Kafka"]
+    end
+
+    subgraph platform["platform layer"]
+        argocd["ArgoCD App of Apps"]
+        istio["Istio mesh policies"]
+        obs["Prometheus/Grafana/Loki/Tempo/OTel"]
+        ci["Self-hosted GitHub Actions + Kaniko"]
+    end
+
+    client --> kong --> gateway
+    gateway --> user
+    gateway --> zone
+    gateway --> queue
+    gateway --> notification
+    user --> pg
+    zone --> pg
+    queue --> pg
+    queue --> valkey
+    zone --> valkey
+    queue --> kafka
+    zone --> kafka
+    kafka --> notification
+    istio -. retries/outlier detection .-> notification
+    apps -. metrics/logs/traces .-> obs
+    ci -. image tags .-> argocd
+    argocd -. sync .-> apps
+    argocd -. sync .-> data
+    argocd -. sync .-> platform

@@ -1,80 +1,33 @@
-# QueueAndOccupancyManagementSystem
+# Queue and Occupancy Management System
 
-Runnable MVP монорепозитория для системы мониторинга очередей и управления загрузкой университетской столовой и коворкинга. Реализация опирается на уже согласованную документацию и сохраняет исходную архитектурную идею: синхронные REST-команды через `API Gateway`, асинхронные доменные события через Kafka, `PostgreSQL` как транзакционный слой, `Redis / Valkey` как hot data и rate limiting, `MongoDB` как concrete `NoSQL / cold storage` для occupancy history и telemetry.
+This repository contains the university canteen and coworking queue/occupancy monitoring system from Block 1, plus the Block 2 local platform layer.
 
-## Состав monorepo
+The application domain is unchanged: clients use an API Gateway, services exchange domain events through Kafka, PostgreSQL stores transactional data, Valkey/Redis stores hot data and rate-limit keys, and MongoDB stores occupancy telemetry history.
 
-- `apps/api-gateway` - единая входная точка, JWT auth, role checks, Redis-backed rate limiting.
-- `apps/user-web` - пользовательский интерфейс для зон, очереди, бронирований и уведомлений.
-- `apps/admin-web` - административный интерфейс для зон, правил и occupancy demo.
-- `services/user-service` - пользователи, роли, login/register, JWT issue.
-- `services/zone-management-service` - managed zones, rules, status, occupancy handling, zone events.
-- `services/queue-service` - очередь для `dining_zone`.
-- `services/reservation-service` - бронирования для `coworking_zone`.
-- `services/notification-service` - Kafka consumer и история уведомлений.
-- `services/monitoring-event-ingestion-service` - intake внешних occupancy signals, Mongo history, telemetry snapshots.
-- `packages/shared` - общие доменные константы, роли, типы зон, Kafka events, event envelope.
-- `packages/backend-common` - request ids, header-based user context, service guards, health helpers.
-- `tests/smoke` - smoke-сценарии для ключевых end-to-end путей.
+## Main components
 
-## Технологии
+- `apps/api-gateway`
+- `services/user-service`
+- `services/queue-service`
+- `services/zone-management-service`
+- `services/notification-service`
+- optional: `services/reservation-service`, `services/monitoring-event-ingestion-service`
+- `apps/user-web`, `apps/admin-web`
 
-- Node.js 20+
-- TypeScript
-- pnpm workspaces
-- NestJS
-- React + Vite
-- PostgreSQL
-- Redis / Valkey
-- MongoDB
-- Kafka
-- nginx
-- Docker Compose
-
-## Запуск
-
-### 1. Подготовить env
+## Block 1 quick start
 
 ```bash
 cp .env.example .env
-```
-
-На Windows можно просто создать `.env` рядом с `.env.example` и скопировать значения.
-
-### 2. Поднять окружение
-
-```bash
 docker compose up --build
 ```
 
-После первого старта compose поднимет:
+Open:
 
-- `postgres`
-- `redis`
-- `mongo`
-- `kafka`
-- все backend services
-- `api-gateway`
-- `user-web`
-- `admin-web`
-- `nginx`
-- `bootstrap` для `migrate + seed`
+- user UI: http://localhost:8080/
+- admin UI: http://localhost:8080/admin/
+- gateway health: http://localhost:8080/api/health
 
-### 3. Открыть приложение
-
-- пользовательский UI: [http://localhost:8080/](http://localhost:8080/)
-- административный UI: [http://localhost:8080/admin/](http://localhost:8080/admin/)
-- gateway health: [http://localhost:8080/api/health](http://localhost:8080/api/health)
-
-## Seed users
-
-Пароль для всех seeded пользователей:
-
-```text
-Password123!
-```
-
-Пользователи:
+Seed users use password `Password123!`:
 
 - `student@example.com`
 - `employee@example.com`
@@ -82,83 +35,32 @@ Password123!
 - `coworking_admin@example.com`
 - `system_admin@example.com`
 
-## Seed zones
+## Block 2 platform layer
 
-- `Main Dining Hall` - `dining_zone`
-- `North Coworking Space` - `coworking_zone`
+Block 2 adds a local Kubernetes, GitOps, service mesh, autoscaling, observability, rate limiting, load testing, and CI/CD layer over the existing services.
 
-## Основные API
+Stack:
 
-### User service
+- Minikube with Cilium target CNI
+- Terraform baseline for namespaces, service accounts, secrets, config maps, and minimal RBAC
+- ArgoCD App of Apps
+- Helm charts for `api-gateway`, `user-service`, `queue-service`, `zone-management-service`, `notification-service`
+- Strimzi Kafka deployed through Ansible
+- Kong Gateway API routing and Redis-backed rate limiting
+- Istio retry and circuit breaker policy
+- Prometheus, Grafana, Loki, Tempo, OpenTelemetry Collector, Alertmanager
+- Locust load tests
+- GitHub Actions self-hosted runner workflow with Kaniko and local registry
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `GET /api/users/:id`
-- `GET /api/users`
-- `PATCH /api/users/:id/role`
+Short Block 2 path:
 
-### Zone management
-
-- `GET /api/zones`
-- `GET /api/zones/:id`
-- `POST /api/zones`
-- `PATCH /api/zones/:id`
-- `GET /api/zones/:id/status`
-- `GET /api/zones/:id/rules`
-- `PATCH /api/zones/:id/rules`
-
-### Queue
-
-- `POST /api/queues/:zoneId/join`
-- `POST /api/queues/:zoneId/leave`
-- `GET /api/queues/:zoneId/me`
-- `GET /api/queues/:zoneId/state`
-
-### Reservation
-
-- `POST /api/reservations`
-- `DELETE /api/reservations/:id`
-- `GET /api/reservations/me`
-- `GET /api/reservations/zone/:zoneId`
-
-### Notifications
-
-- `GET /api/notifications/me`
-- `PATCH /api/notifications/:id/read`
-
-### Monitoring intake
-
-- `POST /api/occupancy-events`
-- `GET /api/occupancy-events/:zoneId/history`
-- `GET /api/telemetry/:zoneId/latest`
-
-## Demo flow 
-Кратко туда-сюда:
-
-1. Войти как `student@example.com` в user-web, открыть dining zone, вступить в очередь, показать позицию и уведомление.
-2. В user-web открыть coworking zone, создать бронирование, показать запись и уведомление.
-3. Войти как `system_admin@example.com` в admin-web, отправить occupancy signal, показать обновленную загрузку, telemetry history и событие перегрузки.
-
-## Smoke tests
-
-После старта окружения можно выполнить:
-
-```bash
-pnpm smoke
+```powershell
+.\scripts\block2\bootstrap-minikube.ps1
+.\scripts\block2\apply-terraform.ps1
+.\scripts\block2\deploy-kafka.ps1
+.\scripts\block2\install-argocd.ps1
+.\scripts\block2\port-forward.ps1 -Target gateway
+.\scripts\block2\run-locust.ps1
 ```
 
-Если хостовый `pnpm install` недоступен, smoke suite можно запустить внутри `api-gateway` container:
-
-```bash
-docker exec qoms-api-gateway-1 sh -lc "cd /app && SMOKE_BASE_URL=http://127.0.0.1:3000 pnpm smoke"
-```
-
-Smoke suite проверяет:
-
-- login seeded student
-- join dining queue
-- reservation create
-- notification creation
-- occupancy ingest
-- telemetry endpoint
+Detailed instructions are in [BLOCK2_RUNBOOK.md](BLOCK2_RUNBOOK.md). Current verification status and local limitations are in [BLOCK2_STATUS.md](BLOCK2_STATUS.md).
