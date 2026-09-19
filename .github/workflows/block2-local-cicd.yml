@@ -1,0 +1,98 @@
+name: Block 2 Local CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to publish. Defaults to the commit SHA.
+        required: false
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/**"
+      - "services/**"
+      - "packages/**"
+      - "Dockerfile"
+      - "helm/**"
+      - ".github/workflows/block2-local-cicd.yml"
+
+env:
+  REGISTRY: host.minikube.internal:5000
+  IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+  SERVICES: api-gateway user-service queue-service zone-management-service notification-service
+
+jobs:
+  validate:
+    name: Validate workspace
+    runs-on: [self-hosted, qoms-local, linux]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show tool versions
+        run: |
+          node --version || true
+          kubectl version --client || true
+          helm version --short || true
+      - name: Helm template charts
+        run: |
+          for service in $SERVICES; do
+            helm template "$service" "helm/$service" --namespace qoms-apps >/tmp/"$service".yaml
+          done
+
+  build-images:
+    name: Build and push images with Kaniko
+    runs-on: [self-hosted, qoms-local, linux]
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - user-service
+          - queue-service
+          - zone-management-service
+          - notification-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            gcr.io/kaniko-project/executor:v1.23.2-debug \
+            --context dir:///workspace \
+            --dockerfile /workspace/Dockerfile \
+            --destination "$REGISTRY/qoms/${{ matrix.service }}:$IMAGE_TAG" \
+            --insecure \
+            --skip-tls-verify \
+            --cache=true
+
+  update-gitops:
+    name: Update Helm tags and sync ArgoCD
+    runs-on: [self-hosted, qoms-local, linux]
+    needs: build-images
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update image tags
+        shell: pwsh
+        run: ./scripts/block2/update-image-tags.ps1 -Tag "$env:IMAGE_TAG"
+      - name: Commit tag updates
+        run: |
+          git config user.name "qoms-local-runner"
+          git config user.email "qoms-local-runner@example.local"
+          git add helm/*/values.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "ci(block2): update local image tags"
+          git push
+      - name: Sync ArgoCD
+        env:
+          ARGOCD_SERVER: localhost:8081
+        run: |
+          if command -v argocd >/dev/null 2>&1; then
+            argocd app sync block2-root --grpc-web || true
+            argocd app wait block2-root --health --timeout 300 --grpc-web || true
+          else
+            echo "argocd CLI is not installed on this runner; sync manually or install the CLI."
+          fi

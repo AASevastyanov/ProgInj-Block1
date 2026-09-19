@@ -1,0 +1,75 @@
+replicaCount: 2
+
+image:
+  repository: host.minikube.internal:5000/qoms/api-gateway
+  tag: dev
+  pullPolicy: IfNotPresent
+
+command: ["pnpm", "--filter", "@qoms/api-gateway", "start"]
+containerPort: 3000
+
+serviceAccount:
+  create: true
+  name: api-gateway
+
+service:
+  type: ClusterIP
+  port: 3000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+env:
+  NODE_ENV: production
+  API_GATEWAY_PORT: "3000"
+  KAFKA_BROKERS: qoms-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092
+  KAFKA_TOPIC: queue-and-occupancy-events
+  POSTGRES_HOST: postgres.qoms-data.svc.cluster.local
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: qoms
+  POSTGRES_USER: qoms
+  REDIS_HOST: valkey.qoms-data.svc.cluster.local
+  REDIS_PORT: "6379"
+  MONGO_URI: mongodb://mongodb.qoms-data.svc.cluster.local:27017/qoms
+  USER_SERVICE_URL: http://user-service:3001
+  ZONE_MANAGEMENT_SERVICE_URL: http://zone-management-service:3002
+  QUEUE_SERVICE_URL: http://queue-service:3003
+  RESERVATION_SERVICE_URL: http://reservation-service:3004
+  NOTIFICATION_SERVICE_URL: http://notification-service:3005
+  MONITORING_SERVICE_URL: http://monitoring-event-ingestion-service:3006
+  NO_PROXY: localhost,127.0.0.1,.svc,.cluster.local,postgres,valkey,mongodb,qoms-kafka-kafka-bootstrap,user-service,zone-management-service,queue-service,reservation-service,notification-service,monitoring-event-ingestion-service,api-gateway
+  no_proxy: localhost,127.0.0.1,.svc,.cluster.local,postgres,valkey,mongodb,qoms-kafka-kafka-bootstrap,user-service,zone-management-service,queue-service,reservation-service,notification-service,monitoring-event-ingestion-service,api-gateway
+
+secretEnv:
+  - name: JWT_SECRET
+    secretName: qoms-app-secrets
+    secretKey: jwtSecret
+  - name: INTERNAL_SERVICE_TOKEN
+    secretName: qoms-app-secrets
+    secretKey: internalServiceToken
+  - name: POSTGRES_PASSWORD
+    secretName: qoms-app-secrets
+    secretKey: postgresPassword
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /metrics
+  prometheus.io/port: "3000"
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+ingress:
+  enabled: false

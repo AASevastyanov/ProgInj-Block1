@@ -1,0 +1,11 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: qoms-apps-permissive
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-apps-permissive
+    app.kubernetes.io/part-of: qoms
+spec:
+  mtls:
+    mode: PERMISSIVE

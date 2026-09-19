@@ -1,0 +1,6 @@
+kubeconfig_path        = "~/.kube/config"
+kube_context           = "minikube"
+environment            = "local"
+jwt_secret             = "super-secret-jwt-key"
+internal_service_token = "internal-service-token"
+postgres_password      = "qoms"

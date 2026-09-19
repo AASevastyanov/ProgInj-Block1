@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: qoms-db-bootstrap
+  namespace: qoms-apps
+  labels:
+    app.kubernetes.io/name: qoms-db-bootstrap
+    app.kubernetes.io/part-of: qoms
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qoms-db-bootstrap
+        app.kubernetes.io/part-of: qoms
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: host.minikube.internal:5000/qoms/api-gateway:dev
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "pnpm migrate && pnpm seed"]
+          env:
+            - name: POSTGRES_HOST
+              value: postgres.qoms-data.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: qoms
+            - name: POSTGRES_USER
+              value: qoms
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: qoms-app-secrets
+                  key: postgresPassword

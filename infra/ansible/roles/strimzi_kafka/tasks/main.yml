@@ -1,0 +1,93 @@
+---
+- name: Ensure render directory exists
+  ansible.builtin.file:
+    path: "{{ strimzi_render_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure Kafka namespace exists
+  ansible.builtin.command:
+    cmd: kubectl create namespace {{ strimzi_namespace }} --dry-run=client -o yaml
+  register: kafka_namespace_yaml
+  changed_when: false
+
+- name: Apply Kafka namespace
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ kafka_namespace_yaml.stdout }}"
+  changed_when: "'created' in namespace_apply.stdout or 'configured' in namespace_apply.stdout"
+  register: namespace_apply
+
+- name: Download Strimzi cluster operator manifest
+  ansible.builtin.get_url:
+    url: "{{ strimzi_operator_manifest_url }}"
+    dest: "{{ strimzi_render_dir }}/strimzi-cluster-operator-{{ strimzi_version }}.yaml"
+    mode: "0644"
+
+- name: Render Strimzi operator namespace for local stand
+  ansible.builtin.replace:
+    path: "{{ strimzi_render_dir }}/strimzi-cluster-operator-{{ strimzi_version }}.yaml"
+    regexp: "namespace: myproject"
+    replace: "namespace: {{ strimzi_namespace }}"
+
+- name: Install Strimzi cluster operator
+  ansible.builtin.command:
+    cmd: kubectl apply -n {{ strimzi_namespace }} -f {{ strimzi_render_dir }}/strimzi-cluster-operator-{{ strimzi_version }}.yaml
+  register: strimzi_operator_apply
+  changed_when: "'created' in strimzi_operator_apply.stdout or 'configured' in strimzi_operator_apply.stdout"
+
+- name: Wait for Strimzi operator deployment
+  ansible.builtin.command:
+    cmd: kubectl rollout status deployment/strimzi-cluster-operator -n {{ strimzi_namespace }} --timeout=180s
+  changed_when: false
+
+- name: Wait for Kafka CRD
+  ansible.builtin.command:
+    cmd: kubectl wait --for=condition=Established crd/kafkas.kafka.strimzi.io --timeout=120s
+  changed_when: false
+
+- name: Wait for KafkaNodePool CRD
+  ansible.builtin.command:
+    cmd: kubectl wait --for=condition=Established crd/kafkanodepools.kafka.strimzi.io --timeout=120s
+  changed_when: false
+
+- name: Render Kafka cluster manifest
+  ansible.builtin.template:
+    src: kafka-cluster.yaml.j2
+    dest: "{{ strimzi_render_dir }}/{{ kafka_cluster_name }}.yaml"
+    mode: "0644"
+
+- name: Render Kafka node pool manifest
+  ansible.builtin.template:
+    src: kafka-node-pool.yaml.j2
+    dest: "{{ strimzi_render_dir }}/{{ kafka_cluster_name }}-node-pool.yaml"
+    mode: "0644"
+
+- name: Render Kafka topic manifest
+  ansible.builtin.template:
+    src: kafka-topic.yaml.j2
+    dest: "{{ strimzi_render_dir }}/{{ kafka_topic_name }}.yaml"
+    mode: "0644"
+
+- name: Apply Kafka node pool
+  ansible.builtin.command:
+    cmd: kubectl apply -f {{ strimzi_render_dir }}/{{ kafka_cluster_name }}-node-pool.yaml
+  register: node_pool_apply
+  changed_when: "'created' in node_pool_apply.stdout or 'configured' in node_pool_apply.stdout"
+
+- name: Apply Kafka cluster
+  ansible.builtin.command:
+    cmd: kubectl apply -f {{ strimzi_render_dir }}/{{ kafka_cluster_name }}.yaml
+  register: kafka_apply
+  changed_when: "'created' in kafka_apply.stdout or 'configured' in kafka_apply.stdout"
+
+- name: Wait for Kafka cluster readiness
+  ansible.builtin.command:
+    cmd: kubectl wait kafka/{{ kafka_cluster_name }} -n {{ strimzi_namespace }} --for=condition=Ready --timeout=600s
+  changed_when: false
+
+- name: Apply Kafka topic
+  ansible.builtin.command:
+    cmd: kubectl apply -f {{ strimzi_render_dir }}/{{ kafka_topic_name }}.yaml
+  register: topic_apply
+  changed_when: "'created' in topic_apply.stdout or 'configured' in topic_apply.stdout"

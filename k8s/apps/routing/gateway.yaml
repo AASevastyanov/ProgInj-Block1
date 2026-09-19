@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+  labels:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/part-of: qoms
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: qoms-gateway
+  namespace: qoms-platform
+  labels:
+    app.kubernetes.io/name: qoms-gateway
+    app.kubernetes.io/part-of: qoms
+spec:
+  gatewayClassName: kong
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All

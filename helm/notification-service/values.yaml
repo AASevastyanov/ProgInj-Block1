@@ -1,0 +1,64 @@
+replicaCount: 2
+
+image:
+  repository: host.minikube.internal:5000/qoms/notification-service
+  tag: dev
+  pullPolicy: IfNotPresent
+
+command: ["pnpm", "--filter", "@qoms/notification-service", "start"]
+containerPort: 3005
+
+serviceAccount:
+  create: true
+  name: notification-service
+
+service:
+  type: ClusterIP
+  port: 3005
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 600m
+    memory: 768Mi
+
+env:
+  NODE_ENV: production
+  NOTIFICATION_SERVICE_PORT: "3005"
+  KAFKA_BROKERS: qoms-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092
+  KAFKA_TOPIC: queue-and-occupancy-events
+  POSTGRES_HOST: postgres.qoms-data.svc.cluster.local
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: qoms
+  POSTGRES_USER: qoms
+  USER_SERVICE_URL: http://user-service:3001
+  NO_PROXY: localhost,127.0.0.1,.svc,.cluster.local,postgres,valkey,mongodb,qoms-kafka-kafka-bootstrap,user-service,zone-management-service,queue-service,notification-service,api-gateway
+  no_proxy: localhost,127.0.0.1,.svc,.cluster.local,postgres,valkey,mongodb,qoms-kafka-kafka-bootstrap,user-service,zone-management-service,queue-service,notification-service,api-gateway
+
+secretEnv:
+  - name: INTERNAL_SERVICE_TOKEN
+    secretName: qoms-app-secrets
+    secretKey: internalServiceToken
+  - name: POSTGRES_PASSWORD
+    secretName: qoms-app-secrets
+    secretKey: postgresPassword
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /metrics
+  prometheus.io/port: "3005"
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+ingress:
+  enabled: false

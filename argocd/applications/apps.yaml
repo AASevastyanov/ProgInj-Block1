@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: block2-apps
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: block2-apps
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: argocd/services
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

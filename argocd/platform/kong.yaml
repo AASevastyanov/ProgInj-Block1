@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-kong
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: platform-kong
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.konghq.com
+      chart: ingress
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/k8s/platform/kong/kong-values.yaml
+    - repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kong
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-kong-routes
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: platform-kong-routes
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: k8s/apps/routing
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

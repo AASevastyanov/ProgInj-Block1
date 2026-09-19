@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { setupMetrics } from "@qoms/backend-common";
 import { AppModule } from "./app.module";
 
 async function bootstrap(): Promise<void> {
@@ -12,10 +13,10 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: true
     })
   );
+  setupMetrics(app, "queue-service");
   const port = Number(process.env.QUEUE_SERVICE_PORT ?? 3003);
   await app.listen(port, "0.0.0.0");
   Logger.log(`queue-service listening on ${port}`, "Bootstrap");
 }
 
 bootstrap();
-

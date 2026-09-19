@@ -1,0 +1,41 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: qoms-block2-alerts
+  namespace: qoms-observability
+  labels:
+    app.kubernetes.io/name: qoms-block2-alerts
+    app.kubernetes.io/part-of: qoms
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: qoms.block2
+      rules:
+        - alert: QomsGatewayHigh5xx
+          expr: sum(rate(qoms_http_requests_total{service="api-gateway",status_code=~"5.."}[5m])) > 0.1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: API Gateway is returning 5xx responses.
+        - alert: QomsPodRestarts
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"qoms-apps|qoms-data|kafka"}[10m]) > 2
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: A QOMS workload restarted repeatedly.
+        - alert: QomsKafkaNotReady
+          expr: kube_statefulset_status_replicas_ready{namespace="kafka",statefulset=~"qoms-kafka-.*"} < 1
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: Local Strimzi Kafka is not ready.
+        - alert: QomsHighRequestLatency
+          expr: histogram_quantile(0.95, sum(rate(qoms_http_request_duration_seconds_bucket[5m])) by (le, service)) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: P95 service latency is above one second.

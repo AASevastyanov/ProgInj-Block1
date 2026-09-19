@@ -1,0 +1,13 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: {{ kafka_topic_name }}
+  namespace: {{ strimzi_namespace }}
+  labels:
+    strimzi.io/cluster: {{ kafka_cluster_name }}
+spec:
+  partitions: {{ kafka_partitions }}
+  replicas: {{ kafka_replication_factor }}
+  config:
+    retention.ms: 604800000
+    cleanup.policy: delete

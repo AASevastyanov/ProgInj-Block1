@@ -1,0 +1,165 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-api-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: helm/api-gateway
+    helm:
+      releaseName: api-gateway
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-user-service
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: user-service
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: helm/user-service
+    helm:
+      releaseName: user-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-zone-management-service
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: zone-management-service
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: helm/zone-management-service
+    helm:
+      releaseName: zone-management-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-queue-service
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: queue-service
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: helm/queue-service
+    helm:
+      releaseName: queue-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-notification-service
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: helm/notification-service
+    helm:
+      releaseName: notification-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-db-bootstrap
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: qoms-db-bootstrap
+    app.kubernetes.io/part-of: qoms
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AASevastyanov/ProgInj-Block1.git
+    targetRevision: main
+    path: k8s/apps/bootstrap
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qoms-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
