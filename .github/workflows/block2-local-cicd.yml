@@ -12,13 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Show tool versions
-        shell: pwsh
+        shell: powershell
         run: |
           node --version
           kubectl version --client
           helm version --short
       - name: Helm template charts
-        shell: pwsh
+        shell: powershell
         run: |
           foreach ($s in "api-gateway","user-service","queue-service","zone-management-service","notification-service") {
             helm template $s "helm/$s" --namespace qoms-apps > $null
@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build image
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Building ${{ matrix.service }}"
           docker build -t host.minikube.internal:5000/qoms/${{ matrix.service }}:${{ github.sha }} .
@@ -49,6 +49,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Show ArgoCD state
-        shell: pwsh
+        shell: powershell
         run: |
           kubectl get applications -n argocd
