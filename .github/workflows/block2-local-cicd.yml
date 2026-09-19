@@ -1,0 +1,54 @@
+name: Block 2 Local CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate workspace
+    runs-on: [self-hosted, Windows, X64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show tool versions
+        shell: pwsh
+        run: |
+          node --version
+          kubectl version --client
+          helm version --short
+      - name: Helm template charts
+        shell: pwsh
+        run: |
+          foreach ($s in "api-gateway","user-service","queue-service","zone-management-service","notification-service") {
+            helm template $s "helm/$s" --namespace qoms-apps > $null
+            Write-Host "Templated $s"
+          }
+
+  build-images:
+    name: Build and push images
+    runs-on: [self-hosted, Windows, X64]
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api-gateway, user-service, queue-service, zone-management-service, notification-service]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        shell: pwsh
+        run: |
+          Write-Host "Building ${{ matrix.service }}"
+          docker build -t host.minikube.internal:5000/qoms/${{ matrix.service }}:${{ github.sha }} .
+          Write-Host "Built ${{ matrix.service }}"
+
+  update-gitops:
+    name: Update Helm tags and sync ArgoCD
+    runs-on: [self-hosted, Windows, X64]
+    needs: build-images
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show ArgoCD state
+        shell: pwsh
+        run: |
+          kubectl get applications -n argocd
