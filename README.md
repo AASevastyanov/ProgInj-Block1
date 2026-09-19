@@ -64,3 +64,4 @@ docker compose up --build
 ```
 
 Подробные инструкции находятся в `BLOCK2_RUNBOOK.md`.
+# ci trigger 2026-09-19 20:07:48Z
